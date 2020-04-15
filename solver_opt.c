@@ -5,19 +5,19 @@
 #include "utils.h"
 
 
-double* multiply_opt(int N, double *a, double* b) {
+double* multiply_opt_lowerTrMatrix(int N, double *a, double* b) {
 	double *C = (double *)calloc(N * N, sizeof(double));
 	if (C == NULL)
 		return NULL;
 
-	int i = 0, j = 0, k = 0;
+	register int i = 0, j = 0, k = 0;
 	
 	for (i = 0; i < N; i++) {
-		double *orig_pa = &a[i * N + 0];
+		register double *orig_pa = &a[i * N + 0];
 		for (j = 0; j < N; j++) {
-			double *pa = orig_pa;
-			double *pb = &b[0 * N + j];
-			register double sum = 0;
+			register double *pa = orig_pa + j;
+			register double *pb = &b[j * N + j];
+			register double sum = 0.0;
 			for (k = 0; k < N; k++) {
 				sum += *pa * *pb;
 				pa++;
@@ -30,25 +30,23 @@ double* multiply_opt(int N, double *a, double* b) {
 
 }
 
-double* multiply_opt_upperTriangular(int N, double *a) {
+double* multiply_opt_upperTrMatrix(int N, double *a, double* b) {
 	double *C = (double *)calloc(N * N, sizeof(double));
 	if (C == NULL)
 		return NULL;
 
-	int i = 0, j = 0, k = 0;
+	register int i = 0, j = 0, k = 0;
 	
 	for (i = 0; i < N; i++) {
-		double *orig_pa = &a[i * N + 0];
+		register double *orig_pa = &a[i * N + i];
 		for (j = 0; j < N; j++) {
-			double *pa = orig_pa;
-			double *pb = &a[0 * N + j];
-			register double sum = 0;
-			for (k = 0; k < N; k++) {
-				if (!(i > j)) {
-					sum += *pa * *pb;
-					pa++;
-					pb += N;
-				}
+			register double *pa = orig_pa;
+			register double *pb = &b[i * N + j];
+			register double sum = 0.0;
+			for (k = i; k < N; k++) {
+				sum += *pa * *pb;
+				pa++;
+				pb += N;
 			}
 			C[i * N + j] = sum;
 		}
@@ -56,6 +54,7 @@ double* multiply_opt_upperTriangular(int N, double *a) {
 	return C;
 
 }
+
 
 /*
  * Add your optimized implementation here
@@ -90,18 +89,17 @@ double* my_solver(int N, double *A, double* B) {
 
 	for (i = 0; i < N; i++) {
 		for (j = 0; j < N; j++) {
-			idxA = i * N + j;
-			idxAt = j * N + i;
+			if (!(i > j)) {
+				idxA = i * N + j;
+				idxAt = j * N + i;
 
-			At[idxAt] = A[idxA];
+				At[idxAt] = A[idxA];
+			}
 		}
 	}
 
-	//compute B * At
-	// int finalIdx = -1;
-	// int idx1 = -1;
-	// int idx2 = -1;
-	// int sum = 0;
+
+
 
 	// printf("-------------- A ------------- \n");
 	// for (c = 0; c < N; c++) {
@@ -120,31 +118,32 @@ double* my_solver(int N, double *A, double* B) {
 	// 	printf("\n");
 	// }
 
-	temp1 = multiply_opt(N, B, At);
+	//compute B * At
+	temp1 = multiply_opt_lowerTrMatrix(N, B, At);
 	if (temp1 == NULL)
 		return NULL;
 
 	//compute A^2
-	temp2 = multiply_opt_upperTriangular(N, A);
+	temp2 = multiply_opt_upperTrMatrix(N, A, A);
 	if (temp2 == NULL)
 		return NULL;
 
 	// compute A^2 (=temp2) * B
-	temp3 = multiply_opt(N, temp2, B);
+	temp3 = multiply_opt_upperTrMatrix(N, temp2, B);
 	if (temp3 == NULL)
 		return NULL;
 
 
 
-	 printf("-------------- result ------------- \n");
+	// printf("-------------- result ------------- \n");
 
 	//compute sum (B * At + A^2 * B)
 	for (c = 0; c < N; c++) {
 		for (d = 0 ; d < N; d++) {
 			C[c * N + d] = temp1[c * N + d] + temp3[c * N + d];
-			printf("%f ", C[c * N + d]);
+			// printf("%f ", C[c * N + d]);
 		}
-		printf("\n");
+		// printf("\n");
 	}
 
 	free(At);
